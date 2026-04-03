@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Industry Theory | AI-Based Weather Advisory System</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #516079;
+      --accent: #7c3aed;
+      --accent-2: #22d3ee;
+      --accent-3: #f97316;
+      --card: #f8fafc;
+      --line: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "DM Sans", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 520px at 20% 90%, rgba(94, 234, 212, 0.18) 0%, transparent 55%),
+        radial-gradient(900px 540px at 8% 12%, rgba(59, 130, 246, 0.22) 0%, transparent 55%),
+        radial-gradient(820px 520px at 92% 8%, rgba(14, 165, 233, 0.22) 0%, transparent 58%),
+        radial-gradient(760px 520px at 50% 92%, rgba(16, 185, 129, 0.18) 0%, transparent 60%),
+        linear-gradient(135deg, #f8fafc 0%, #eef2f7 45%, #e2e8f0 100%);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 36px 20px 10px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 40px);
+      letter-spacing: 0.3px;
+    }
+
+    header p {
+      margin: 0 auto;
+      max-width: 720px;
+      color: var(--muted);
+      font-size: clamp(14px, 2vw, 18px);
+    }
+
+    .header-actions {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .wrap {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr);
+      gap: 24px;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px 20px 50px;
+      justify-items: center;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      padding: 20px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+      backdrop-filter: blur(8px);
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    .meta {
+      display: grid;
+      gap: 14px;
+    }
+
+    .meta ul {
+      margin: 8px 0 0 18px;
+      padding: 0;
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 1px solid #c4b5fd;
+      background: #fff;
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI-Based Weather Advisory System</h1>
+    <p>Industry theory and modeling context for probabilistic weather advisories.</p>
+    <div class="header-actions">
+      <a class="btn" href="index.html">Back to Dashboard</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h2>Industry Theory</h2>
+      <div class="meta">
+        <div>
+          <div class="chip">1. Industry Problem Context</div>
+          <p class="muted">In the IT industry, weather-based advisories support:</p>
+          <ul class="muted">
+            <li>Disaster management platforms and public alert systems</li>
+            <li>Transportation and aviation scheduling systems</li>
+            <li>Smart city monitoring dashboards</li>
+            <li>Energy demand forecasting and grid operations</li>
+            <li>Logistics and supply chain planning</li>
+          </ul>
+          <p class="muted">The core goal is to estimate risk and recommend actions based on evolving conditions.</p>
+        </div>
+
+        <div>
+          <div class="chip">2. Feasibility in IT Systems</div>
+          <ul class="muted">
+            <li>Weather observations are modeled as structured data streams.</li>
+            <li>Features include temperature, humidity, wind, and derived indicators.</li>
+            <li>Data is stored in time-series databases or event pipelines.</li>
+            <li>Real-time scoring and alerting is scalable in cloud infrastructure.</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="chip">3. AI Techniques Used in Industry</div>
+          <ul class="muted">
+            <li>Bayesian inference for probabilistic risk estimation.</li>
+            <li>Rule-based heuristics layered on top for safety thresholds.</li>
+            <li>Ensembles of probabilistic models for robust decisions.</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="chip">4. Representation / Modeling</div>
+          <ul class="muted">
+            <li>Probability model over weather events (rain, storm, heatwave).</li>
+            <li>State = latest readings, transitions = updated sensor inputs.</li>
+            <li>Condition rules map probabilities to advisory levels.</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="chip">5. Tools & Technologies</div>
+          <ul class="muted">
+            <li>Python for model prototyping and data analysis.</li>
+            <li>APIs for live weather feeds and sensor integration.</li>
+            <li>Dashboards for visualization and alerting.</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="chip">6. Industry-Level Outcome</div>
+          <ul class="muted">
+            <li>Real-time advisory generation with confidence scoring.</li>
+            <li>Reduced risk via proactive warnings.</li>
+            <li>Metrics: accuracy, false alert rate, response time.</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="chip">7. Real-World Industry Use</div>
+          <ul class="muted">
+            <li>Public weather alert systems and emergency response.</li>
+            <li>Airports and transport hubs for delay planning.</li>
+            <li>Power utilities for demand and outage readiness.</li>
+            <li>Logistics providers for route and safety decisions.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>About This System</h2>
+      <p class="muted">
+        This advisory engine mirrors how IT systems use probabilistic models (like Bayesian inference) to turn
+        live weather readings into actionable alerts. It is commonly applied in disaster response, transport
+        scheduling, smart-city monitoring, and energy/logistics planning, where quick risk estimation improves
+        safety and efficiency.
+      </p>
+    </section>
+  </main>
+</body>
+</html>

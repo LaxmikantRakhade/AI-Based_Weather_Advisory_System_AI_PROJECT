@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI-Based Weather Advisory System</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #516079;
+      --accent: #7c3aed;
+      --accent-2: #22d3ee;
+      --accent-3: #f97316;
+      --accent-4: #10b981;
+      --card: #f8fafc;
+      --line: #e2e8f0;
+      --good: #16a34a;
+      --warn: #d97706;
+      --bad: #dc2626;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "DM Sans", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 520px at 20% 90%, rgba(94, 234, 212, 0.18) 0%, transparent 55%),
+        radial-gradient(900px 540px at 8% 12%, rgba(59, 130, 246, 0.22) 0%, transparent 55%),
+        radial-gradient(820px 520px at 92% 8%, rgba(14, 165, 233, 0.22) 0%, transparent 58%),
+        radial-gradient(760px 520px at 50% 92%, rgba(16, 185, 129, 0.18) 0%, transparent 60%),
+        linear-gradient(135deg, #f8fafc 0%, #eef2f7 45%, #e2e8f0 100%);
+      min-height: 100vh;
+    }
+
+    .sky {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(520px 300px at 78% 12%, rgba(255, 214, 102, 0.28), transparent 60%),
+        radial-gradient(800px 420px at 20% 18%, rgba(56, 189, 248, 0.2), transparent 60%),
+        linear-gradient(180deg, #9ed0f3 0%, #cfe7fb 48%, #f6fbff 100%);
+      pointer-events: none;
+    }
+
+    .horizon {
+      position: fixed;
+      inset: auto 0 0 0;
+      height: 40vh;
+      z-index: 0;
+      background:
+        radial-gradient(120% 100% at 50% 0%, rgba(99, 102, 241, 0.12), transparent 60%),
+        linear-gradient(180deg, rgba(148, 163, 184, 0.18) 0%, rgba(15, 23, 42, 0.08) 100%);
+      mask: linear-gradient(180deg, transparent 0%, #000 35%);
+      pointer-events: none;
+    }
+
+    .mist {
+      position: fixed;
+      inset: auto 0 0 0;
+      height: 22vh;
+      z-index: 0;
+      background:
+        radial-gradient(70% 140% at 20% 0%, rgba(255, 255, 255, 0.7), transparent 70%),
+        radial-gradient(70% 140% at 80% 0%, rgba(255, 255, 255, 0.6), transparent 70%);
+      filter: blur(8px);
+      opacity: 0.6;
+      animation: mistDrift 18s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .sun {
+      position: fixed;
+      top: 40px;
+      right: 120px;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 30%, #fffce6 0%, #fff3b0 35%, #fde047 55%, #f59e0b 100%);
+      box-shadow:
+        0 0 60px rgba(251, 191, 36, 0.5),
+        0 0 140px rgba(251, 191, 36, 0.35),
+        0 0 220px rgba(251, 191, 36, 0.25);
+      z-index: 0;
+      pointer-events: none;
+      animation: sunPulse 6s ease-in-out infinite, sunFloat 18s ease-in-out infinite;
+    }
+
+    .sun::before {
+      content: "";
+      position: absolute;
+      inset: -28px;
+      border-radius: 50%;
+      background:
+        conic-gradient(
+          from 0deg,
+          rgba(253, 224, 71, 0.0) 0deg,
+          rgba(253, 224, 71, 0.35) 20deg,
+          rgba(253, 224, 71, 0.0) 40deg
+        );
+      mask: radial-gradient(circle, transparent 55%, #000 56%);
+      animation: sunRays 10s linear infinite;
+      opacity: 0.8;
+    }
+
+    .sun::after {
+      content: "";
+      position: absolute;
+      inset: -50px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.6), transparent 60%);
+      filter: blur(6px);
+      opacity: 0.6;
+      animation: sunHalo 8s ease-in-out infinite;
+    }
+
+    .clouds {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .cloud {
+      position: absolute;
+      left: -30%;
+      width: 160%;
+      height: 200px;
+      border-radius: 999px;
+      background:
+        radial-gradient(120px 70px at 12% 60%, rgba(255,255,255,0.95), transparent 70%),
+        radial-gradient(160px 90px at 26% 55%, rgba(255,255,255,0.95), transparent 72%),
+        radial-gradient(200px 110px at 42% 62%, rgba(255,255,255,0.96), transparent 72%),
+        radial-gradient(180px 100px at 58% 58%, rgba(255,255,255,0.94), transparent 70%),
+        radial-gradient(220px 120px at 74% 62%, rgba(255,255,255,0.95), transparent 72%),
+        radial-gradient(200px 110px at 88% 58%, rgba(255,255,255,0.93), transparent 70%),
+        radial-gradient(260px 140px at 50% 72%, rgba(255,255,255,0.98), transparent 75%);
+      filter: blur(1.2px);
+      opacity: 0.96;
+      animation: cloudDrift 140s linear infinite;
+    }
+
+    .cloud:nth-child(2){
+      top: 42%;
+      height: 240px;
+      opacity: 0.92;
+      animation-duration: 180s;
+    }
+
+    .cloud:nth-child(3){
+      top: 60%;
+      height: 260px;
+      opacity: 0.9;
+      animation-duration: 200s;
+    }
+
+    .cloud:nth-child(4){
+      top: 30%;
+      height: 210px;
+      opacity: 0.85;
+      animation-duration: 170s;
+    }
+
+    .cloud:nth-child(5){
+      top: 72%;
+      height: 300px;
+      opacity: 0.88;
+      animation-duration: 220s;
+    }
+
+
+    @keyframes sunPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    @keyframes sunRays {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes sunFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(10px); }
+    }
+
+    @keyframes sunHalo {
+      0%, 100% { transform: scale(0.98); opacity: 0.55; }
+      50% { transform: scale(1.05); opacity: 0.75; }
+    }
+
+    @keyframes cloudDrift {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(140vw); }
+    }
+
+    @keyframes mistDrift {
+      0%, 100% { transform: translateX(-2%); }
+      50% { transform: translateX(2%); }
+    }
+
+    header, main, footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      padding: 36px 20px 12px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 44px);
+      letter-spacing: 0.3px;
+    }
+
+    header p {
+      margin: 0 auto;
+      max-width: 720px;
+      color: var(--muted);
+      font-size: clamp(14px, 2vw, 18px);
+    }
+
+    .wrap {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(320px, 520px));
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px 20px 50px;
+      justify-items: center;
+      justify-content: center;
+    }
+
+    @media (max-width: 900px) {
+      .wrap {
+        grid-template-columns: minmax(260px, 1fr);
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      padding: 20px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+      backdrop-filter: blur(8px);
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    .meta {
+      display: grid;
+      gap: 12px;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-weight: 600;
+    }
+
+    .meta-row span:last-child {
+      color: var(--accent);
+    }
+
+    form {
+      display: grid;
+      gap: 12px;
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #cbd5f5;
+      font-size: 16px;
+      outline: none;
+      transition: border 0.2s ease;
+      background: #fff;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2), var(--accent-3));
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+      box-shadow: 0 12px 26px rgba(124, 58, 237, 0.28);
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .badge.good { background: #dcfce7; color: var(--good); }
+    .badge.warn { background: #fef3c7; color: var(--warn); }
+    .badge.bad { background: #fee2e2; color: var(--bad); }
+
+    .result {
+      display: grid;
+      gap: 12px;
+    }
+
+    .input-lab {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.12), rgba(249, 115, 22, 0.12));
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      display: grid;
+      gap: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .input-lab::after {
+      content: "";
+      position: absolute;
+      inset: -60% -20%;
+      background: radial-gradient(240px 120px at 20% 30%, rgba(255, 255, 255, 0.6), transparent 70%);
+      animation: labGlow 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .lab-title {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.2px;
+    }
+
+    .lab-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px dashed #cbd5f5;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .lab-pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .lab-wave {
+      height: 6px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(124,58,237,0.2), rgba(34,211,238,0.9), rgba(249,115,22,0.2));
+      animation: waveMove 2.8s ease-in-out infinite;
+    }
+
+    @keyframes labGlow {
+      0%, 100% { transform: translateX(-10%) translateY(0); opacity: 0.5; }
+      50% { transform: translateX(10%) translateY(-4%); opacity: 0.8; }
+    }
+
+    @keyframes waveMove {
+      0%, 100% { transform: scaleX(0.85); opacity: 0.6; }
+      50% { transform: scaleX(1); opacity: 1; }
+    }
+
+    .status-stage {
+      grid-column: 1 / -1;
+      display: grid;
+      place-items: center;
+      padding: 26px 16px 10px;
+    }
+
+    .status-card {
+      width: min(900px, 96%);
+      border-radius: 18px;
+      padding: 18px 20px;
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+      display: grid;
+      gap: 16px;
+      grid-template-columns: 1.2fr 0.8fr;
+      align-items: center;
+      animation: softReveal 900ms ease-out both;
+    }
+
+    .status-title {
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: 0.2px;
+    }
+
+    .status-sub {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin-top: 4px;
+    }
+
+    .status-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .status-tags .chip {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    .radar {
+      position: relative;
+      width: 180px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.18), rgba(15, 23, 42, 0.04) 62%, rgba(15, 23, 42, 0.06) 100%), #0f172a;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.25), 0 12px 24px rgba(15, 23, 42, 0.2);
+      overflow: hidden;
+      justify-self: center;
+    }
+
+    .radar::before {
+      content: "";
+      position: absolute;
+      inset: 22px;
+      border-radius: 50%;
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+    }
+
+    .radar::after {
+      content: "";
+      position: absolute;
+      inset: 44px;
+      border-radius: 50%;
+      border: 1px dashed rgba(148, 163, 184, 0.4);
+    }
+
+    .radar-grid {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(rgba(148, 163, 184, 0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.2) 1px, transparent 1px);
+      background-size: 36px 36px;
+      opacity: 0.25;
+    }
+
+    .radar-sweep {
+      position: absolute;
+      inset: -20%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, rgba(56, 189, 248, 0), rgba(56, 189, 248, 0.45) 25deg, rgba(56, 189, 248, 0) 55deg, rgba(56, 189, 248, 0));
+      animation: radarSweep 6s linear infinite;
+    }
+
+    .radar-sweep::after {
+      content: "";
+      position: absolute;
+      inset: 20%;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.2), transparent 65%);
+    }
+
+    .radar-blip {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.9);
+      animation: blipPulse 3.6s ease-in-out infinite;
+    }
+
+    .radar-blip.blip-one { top: 30%; left: 68%; animation-delay: 0s; }
+    .radar-blip.blip-two { top: 58%; left: 42%; animation-delay: 1.2s; }
+    .radar-blip.blip-three { top: 46%; left: 22%; animation-delay: 2.1s; }
+
+    @keyframes radarSweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes blipPulse {
+      0%, 100% { transform: scale(0.6); opacity: 0.6; }
+      50% { transform: scale(1.3); opacity: 1; }
+    }
+
+    @media (max-width: 720px) {
+      .status-card {
+        grid-template-columns: 1fr;
+        text-align: left;
+      }
+    }
+
+
+    .calc-panel {
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .calc-title {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.2px;
+    }
+
+    .calc-formula {
+      font-weight: 700;
+      text-align: center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      border: 1px dashed #cbd5f5;
+      font-size: 14px;
+    }
+
+    .calc-steps {
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .calc-step {
+      display: grid;
+      gap: 2px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+
+    .calc-label {
+      font-weight: 700;
+      color: var(--ink);
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      text-transform: uppercase;
+    }
+
+    .calc-mono {
+      font-family: "IBM Plex Mono", "Space Grotesk", monospace;
+      font-size: 12px;
+      color: #334155;
+    }
+
+    .grid-span {
+      grid-column: 1 / -1;
+      max-width: 1100px;
+    }
+
+    .reading {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-weight: 600;
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    #formError {
+      color: #dc2626;
+      font-weight: 600;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .summary .meta-row {
+      font-weight: 700;
+    }
+
+    .chart {
+      background:
+        radial-gradient(520px 260px at 12% 12%, rgba(56, 189, 248, 0.18), transparent 60%),
+        linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
+      border: 1px solid #dbe3f0;
+      border-radius: 20px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 20px 40px rgba(15, 23, 42, 0.12),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    }
+
+    .chart::before {
+      content: "";
+      position: absolute;
+      inset: -40% -20%;
+      background: radial-gradient(60% 40% at 20% 20%, rgba(255, 255, 255, 0.8), transparent 60%);
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .chart svg {
+      width: 100%;
+      height: 440px;
+      display: block;
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .chart svg text {
+      font-family: "Space Grotesk", "DM Sans", "Segoe UI", sans-serif;
+      fill: #1f2937;
+      font-size: 11px;
+      letter-spacing: 0.2px;
+    }
+
+    .chart-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: #0f172a;
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.25);
+      opacity: 0;
+      transform: translate(-50%, -120%);
+      transition: opacity 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .chart-tooltip.visible {
+      opacity: 1;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .storage-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn.secondary {
+      background: #fff;
+      color: var(--accent);
+      border: 1px solid #c4b5fd;
+      box-shadow: none;
+    }
+
+    .recent-exports {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .export-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .export-item a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .pulse {
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.35); }
+      50% { box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 0 20px 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="sky" aria-hidden="true"></div>
+  <div class="sun" aria-hidden="true"></div>
+  <div class="horizon" aria-hidden="true"></div>
+  <div class="mist" aria-hidden="true"></div>
+  <div class="clouds" aria-hidden="true">
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+    <div class="cloud"></div>
+  </div>
+  <header>
+    <h1>AI-Based Weather Advisory System</h1>
+    <p>A probabilistic advisory engine that uses Bayesian inference to estimate risk and deliver weather-based alerts.</p>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h2>Inference Inputs</h2>
+      <form id="advisoryForm" novalidate>
+        <div>
+          <label for="temp">Temperature (°C)</label>
+          <input id="temp" name="temp" type="number" step="0.1" placeholder="e.g. 35" />
+        </div>
+        <div>
+          <label for="humidity">Humidity (%)</label>
+          <input id="humidity" name="humidity" type="number" step="1" placeholder="e.g. 70" />
+        </div>
+        <div>
+          <label for="wind">Wind Speed (km/h)</label>
+          <input id="wind" name="wind" type="number" step="0.1" placeholder="e.g. 18" />
+        </div>
+        <button class="btn" type="submit">Run Bayesian Advisory</button>
+        <div id="formError" class="muted" style="min-height:18px;"></div>
+      </form>
+      <div class="input-lab" aria-live="polite">
+        <div class="lab-title">Input Insight Lab</div>
+        <div class="lab-row">
+          <span>Ideal comfort zone</span>
+          <span class="lab-pill">Temp 20–28°C</span>
+        </div>
+        <div class="lab-row">
+          <span>Humidity balance</span>
+          <span class="lab-pill">40–60%</span>
+        </div>
+        <div class="lab-row">
+          <span>Wind calm range</span>
+          <span class="lab-pill">&lt; 15 km/h</span>
+        </div>
+        <div class="lab-wave" aria-hidden="true"></div>
+        <div class="muted">Tip: Try extremes to see which rule triggers and how confidence changes.</div>
+      </div>
+    </section>
+
+    <section class="card result" aria-live="polite">
+      <h2>Advisory Output</h2>
+      <div id="statusBadge" class="badge good">Awaiting inputs</div>
+      <div id="probability" class="muted">Advisory details will appear after submission.</div>
+      <div id="readings"></div>
+      <div class="calc-panel">
+        <div class="calc-title">Calculation Flow (Live)</div>
+        <div class="calc-formula">
+          P(Risk | Evidence) = ( P(Evidence | Risk) × P(Risk) ) / P(Evidence)
+        </div>
+        <div class="muted">Evidence = Temperature, Humidity, Wind. Posterior maps to advisory level.</div>
+        <div id="calcTrace" class="calc-steps">Enter values to see step-by-step computation.</div>
+      </div>
+      <div id="message" class="muted">Submit inputs to generate the advisory result.</div>
+      <div id="actions"></div>
+      <div id="suggestions" class="muted"></div>
+    </section>
+
+    <section class="card grid-span">
+      <h2>Vertical Reading Graph</h2>
+      <div class="chart">
+        <svg id="analysisChart" viewBox="0 0 700 460" preserveAspectRatio="none" role="img" aria-label="Advisory trend chart"></svg>
+      </div>
+      <p class="muted" id="chartHint">Submit readings to see vertical value lines for temperature, humidity, and wind.</p>
+    </section>
+
+    <section class="card grid-span">
+      <h2>Storage & Graphical Summary</h2>
+      <div class="summary" id="summaryBlocks"></div>
+      <div class="storage-actions">
+        <button class="btn" id="saveGraphBtn" type="button">Save Graph Snapshot</button>
+        <button class="btn secondary" id="clearBtn" type="button">Clear Stored History</button>
+        <button class="btn secondary" id="clearSnapshotsBtn" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v9h-2V9zm4 0h2v9h-2V9zM6 9h2v9H6V9z" fill="currentColor"/>
+          </svg>
+          Clear Snapshots
+        </button>
+      </div>
+      <div class="recent-exports" id="recentExports"></div>
+      <p class="muted">Stored locally in your browser for quick analytics and offline review.</p>
+    </section>
+
+    <section class="card grid-span">
+      <h2>Industry Notes</h2>
+      <p class="muted">Detailed theory, modeling notes, and real-world context are available on a separate page.</p>
+      <a class="btn secondary" href="theory.html">View Industry Briefing</a>
+    </section>
+
+  </main>
+
+  <footer></footer>
+
+  
+  <script>
+const form = document.getElementById("advisoryForm");
+const statusBadge = document.getElementById("statusBadge");
+const probability = document.getElementById("probability");
+const message = document.getElementById("message");
+const readings = document.getElementById("readings");
+const actions = document.getElementById("actions");
+const formError = document.getElementById("formError");
+const suggestions = document.getElementById("suggestions");
+const calcTrace = document.getElementById("calcTrace");
+const analysisChart = document.getElementById("analysisChart");
+const chartHint = document.getElementById("chartHint");
+const summaryBlocks = document.getElementById("summaryBlocks");
+const clearBtn = document.getElementById("clearBtn");
+const saveGraphBtn = document.getElementById("saveGraphBtn");
+const clearSnapshotsBtn = document.getElementById("clearSnapshotsBtn");
+const recentExports = document.getElementById("recentExports");
+
+const STORAGE_KEY = "weather_advisory_history_v1";
+const EXPORT_KEY = "weather_advisory_graph_exports_v1";
+let lastHistory = [];
+
+/* -------- VALIDATION -------- */
+function validateInputs(temp, humidity, wind){
+  if(temp < -50 || temp > 100) return "Temperature out of range (-50 to 100°C)";
+  if(humidity < 0 || humidity > 100) return "Humidity must be 0–100%";
+  if(wind < 0 || wind > 150) return "Wind speed out of range (0 to 150 km/h)";
+  return null;
+}
+
+/* -------- IMPROVED WEATHER LOGIC -------- */
+
+function rainProbability(humidity, temp){
+  let prob = 0;
+
+  if(humidity > 90) prob += 0.7;
+  else if(humidity > 75) prob += 0.5;
+  else if(humidity > 60) prob += 0.3;
+  else prob += 0.1;
+
+  if(temp >= 20 && temp <= 32) prob += 0.2;
+  if(temp < 10) prob -= 0.1;
+
+  return Math.max(0, Math.min(prob, 1));
+}
+
+function stormProbability(humidity, wind){
+  let prob = 0;
+
+  if(wind > 70) prob += 0.7;
+  else if(wind > 50) prob += 0.5;
+  else if(wind > 30) prob += 0.3;
+
+  if(humidity > 85) prob += 0.3;
+  else if(humidity > 70) prob += 0.2;
+
+  return Math.max(0, Math.min(prob, 1));
+}
+
+function temperatureCondition(temp){
+  if(temp <= -10){
+    return {
+      title:"Severe Freezing",
+      message:"Dangerous sub-zero temperatures.",
+      level:"bad",
+      actions:["Avoid outdoor exposure","Wear thermal layers","Protect pipes"]
+    };
+  }
+  if(temp < 0){
+    return {
+      title:"Freezing Condition",
+      message:"Freezing temperatures detected.",
+      level:"bad",
+      actions:["Wear insulated clothing","Limit outdoor time"]
+    };
+  }
+  if(temp < 5){
+    return {
+      title:"Very Cold Weather",
+      message:"Cold conditions with frost risk.",
+      level:"warn",
+      actions:["Dress warmly","Keep extremities covered"]
+    };
+  }
+  if(temp < 15){
+    return {
+      title:"Cool Weather",
+      message:"Cool and brisk conditions.",
+      level:"good",
+      actions:["Light jacket recommended"]
+    };
+  }
+  if(temp < 22){
+    return {
+      title:"Pleasant Weather",
+      message:"Comfortable outdoor conditions.",
+      level:"good",
+      actions:["Ideal for outdoor activities"]
+    };
+  }
+  if(temp < 28){
+    return {
+      title:"Comfortable / Warm",
+      message:"Warm but comfortable temperatures.",
+      level:"good",
+      actions:["Stay lightly hydrated"]
+    };
+  }
+  if(temp < 35){
+    return {
+      title:"Hot Weather",
+      message:"Hot conditions.",
+      level:"warn",
+      actions:["Stay hydrated","Avoid long sun exposure"]
+    };
+  }
+  if(temp < 40){
+    return {
+      title:"Very Hot",
+      message:"Very hot conditions.",
+      level:"warn",
+      actions:["Limit outdoor activity","Seek shade"]
+    };
+  }
+  if(temp < 45){
+    return {
+      title:"High Heat",
+      message:"Extreme heat building.",
+      level:"bad",
+      actions:["Stay indoors","Hydrate frequently","Avoid travel"]
+    };
+  }
+  return {
+    title:"Heatwave Alert",
+    message:"Heatwave conditions detected!",
+    level:"bad",
+    actions:["Stay indoors","Drink water frequently","Avoid travel"]
+  };
+}
+
+function humidityCondition(humidity){
+  if(humidity < 20){
+    return {title:"Very Dry", message:"Dehydration risk in very dry air.", level:"warn", actions:["Drink water","Use humidifier if needed"]};
+  }
+  if(humidity < 40){
+    return {title:"Dry", message:"Dry air conditions.", level:"good", actions:["Stay hydrated"]};
+  }
+  if(humidity < 60){
+    return {title:"Comfortable", message:"Comfortable humidity levels.", level:"good", actions:["Comfortable indoors/outdoors"]};
+  }
+  if(humidity < 75){
+    return {title:"Humid", message:"Humid conditions.", level:"warn", actions:["Light clothing","Stay hydrated"]};
+  }
+  if(humidity < 90){
+    return {title:"Very Humid", message:"Sticky, sweaty conditions likely.", level:"warn", actions:["Avoid heavy activity","Hydrate"]};
+  }
+  return {title:"Rain Likely", message:"Very high humidity indicates rain.", level:"warn", actions:["Carry umbrella"]};
+}
+
+function windCondition(wind){
+  if(wind < 5){
+    return {title:"Calm", message:"Calm wind conditions.", level:"good", actions:["Normal activity"]};
+  }
+  if(wind < 15){
+    return {title:"Light Breeze", message:"Gentle breeze.", level:"good", actions:["Normal activity"]};
+  }
+  if(wind < 30){
+    return {title:"Moderate Wind", message:"Moderate wind conditions.", level:"warn", actions:["Secure loose items"]};
+  }
+  if(wind < 50){
+    return {title:"Strong Wind", message:"Strong wind, caution advised.", level:"warn", actions:["Be cautious outdoors"]};
+  }
+  if(wind < 70){
+    return {title:"Gale Warning", message:"Gale-force winds.", level:"bad", actions:["Avoid travel","Stay indoors"]};
+  }
+  return {title:"Storm / Cyclone", message:"Severe wind, storm conditions.", level:"bad", actions:["Stay indoors","Avoid travel"]};
+}
+
+/* -------- MAIN MODEL -------- */
+
+function advisoryModel({temp, humidity, wind}){
+  const rain = rainProbability(humidity, temp);
+  const storm = stormProbability(humidity, wind);
+  const tempInfo = temperatureCondition(temp);
+  const humidityInfo = humidityCondition(humidity);
+  const windInfo = windCondition(wind);
+
+  let advisory;
+  let confidence;
+  let rule;
+
+  if(humidity > 80 && wind > 40){
+    advisory = {
+      level:"bad",
+      title:"Thunderstorm Warning",
+      message:"High humidity and strong winds indicate thunderstorm risk.",
+      actions:["Stay indoors","Avoid travel","Unplug sensitive electronics"]
+    };
+    confidence = Math.max(0.75, storm);
+    rule = {name:"Thunderstorm Rule", condition:"humidity > 80 AND wind > 40"};
+  } else if(humidity > 85 && temp < 30){
+    advisory = {
+      level:"warn",
+      title:"Heavy Rain",
+      message:"High humidity with cooler air indicates heavy rain.",
+      actions:["Carry umbrella","Avoid flooded areas"]
+    };
+    confidence = Math.max(0.7, rain);
+    rule = {name:"Heavy Rain Rule", condition:"humidity > 85 AND temp < 30"};
+  } else if(temp > 42 && humidity < 50){
+    advisory = {
+      level:"bad",
+      title:"Dry Heatwave",
+      message:"Very high temperature with low humidity.",
+      actions:["Stay indoors","Hydrate frequently","Avoid travel"]
+    };
+    confidence = 0.85;
+    rule = {name:"Dry Heatwave Rule", condition:"temp > 42 AND humidity < 50"};
+  } else if(temp > 35 && humidity > 70){
+    advisory = {
+      level:"bad",
+      title:"Humid Heat Stress",
+      message:"High heat with high humidity causing discomfort.",
+      actions:["Limit outdoor activity","Hydrate","Use cooling"]
+    };
+    confidence = 0.8;
+    rule = {name:"Humid Heat Stress Rule", condition:"temp > 35 AND humidity > 70"};
+  } else if(temp < 5 && wind > 20){
+    advisory = {
+      level:"bad",
+      title:"Cold Wave",
+      message:"Cold temperatures with strong wind increase chill risk.",
+      actions:["Wear thermal layers","Avoid prolonged exposure"]
+    };
+    confidence = 0.8;
+    rule = {name:"Cold Wave Rule", condition:"temp < 5 AND wind > 20"};
+  } else if(temp < 15 && humidity > 85 && wind < 10){
+    advisory = {
+      level:"warn",
+      title:"Fog / Low Visibility",
+      message:"Cool, humid, and calm conditions indicate fog.",
+      actions:["Use headlights","Drive slowly"]
+    };
+    confidence = 0.7;
+    rule = {name:"Fog Rule", condition:"temp < 15 AND humidity > 85 AND wind < 10"};
+  } else if(temp >= 20 && temp <= 28 && humidity >= 40 && humidity <= 60 && wind < 15){
+    advisory = {
+      level:"good",
+      title:"Pleasant Weather",
+      message:"Ideal outdoor conditions detected.",
+      actions:["Enjoy outdoor activities"]
+    };
+    confidence = 0.75;
+    rule = {name:"Pleasant Weather Rule", condition:"temp 20–28 AND humidity 40–60 AND wind < 15"};
+  } else if(storm >= 0.6){
+    advisory = {
+      level:"bad",
+      title:"Storm Warning",
+      message:"High wind speed with humidity indicates storm risk.",
+      actions:["Stay indoors","Avoid travel","Secure loose items"]
+    };
+    confidence = storm;
+    rule = {name:"Storm Probability Rule", condition:`storm >= 0.6 (computed ${storm.toFixed(2)})`};
+  } else if(rain >= 0.5){
+    advisory = {
+      level:"warn",
+      title:"Rain Expected",
+      message:"Weather conditions indicate rainfall.",
+      actions:["Carry umbrella","Drive carefully","Expect wet roads"]
+    };
+    confidence = rain;
+    rule = {name:"Rain Probability Rule", condition:`rain >= 0.5 (computed ${rain.toFixed(2)})`};
+  } else {
+    const rank = {good: 1, warn: 2, bad: 3};
+    const candidates = [tempInfo, humidityInfo, windInfo];
+    advisory = candidates.reduce((best, item) => {
+      if(rank[item.level] > rank[best.level]) return item;
+      return best;
+    }, tempInfo);
+    confidence = 0.7;
+    rule = {
+      name:"Baseline Condition Ranking",
+      condition:`Temp=${tempInfo.title}, Humidity=${humidityInfo.title}, Wind=${windInfo.title}`
+    };
+  }
+
+  return {advisory, confidence, rain, storm, tempInfo, humidityInfo, windInfo, rule};
+}
+
+/* -------- UI -------- */
+function renderReadings(temp, humidity, wind){
+  readings.innerHTML = `
+    <div class="reading"><span>Temperature</span><span>${temp} °C</span></div>
+    <div class="reading"><span>Humidity</span><span>${humidity} %</span></div>
+    <div class="reading"><span>Wind Speed</span><span>${wind} km/h</span></div>
+  `;
+}
+
+function renderTrace(temp, humidity, wind, result){
+  const rainPct = Math.round(result.rain * 100);
+  const stormPct = Math.round(result.storm * 100);
+  const confidencePct = Math.round(result.confidence * 100);
+  const ruleName = result.rule?.name || "Rule Evaluation";
+  const ruleCondition = result.rule?.condition || "Conditions evaluated";
+
+  calcTrace.innerHTML = `
+    <div class="calc-step">
+      <div class="calc-label">Step 1: Evidence</div>
+      <div class="calc-mono">Temp ${temp}°C | Humidity ${humidity}% | Wind ${wind} km/h</div>
+    </div>
+    <div class="calc-step">
+      <div class="calc-label">Step 2: Likelihoods</div>
+      <div class="calc-mono">Rain = ${rainPct}% | Storm = ${stormPct}%</div>
+    </div>
+    <div class="calc-step">
+      <div class="calc-label">Step 3: Rule Triggered</div>
+      <div class="calc-mono">${ruleName}</div>
+      <div class="calc-mono">${ruleCondition}</div>
+    </div>
+    <div class="calc-step">
+      <div class="calc-label">Step 4: Output</div>
+      <div class="calc-mono">${result.advisory.title} | Confidence ${confidencePct}%</div>
+    </div>
+  `;
+}
+
+function loadHistory(){
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(history){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+}
+
+function appendHistory(entry){
+  const history = loadHistory();
+  history.push(entry);
+  const trimmed = history.slice(-30);
+  saveHistory(trimmed);
+  return trimmed;
+}
+
+function renderSummary(history){
+  if(history.length === 0){
+    summaryBlocks.innerHTML = `
+      <div class="meta-row"><span>Total Readings</span><span>0</span></div>
+      <div class="meta-row"><span>Latest Temperature</span><span>--</span></div>
+      <div class="meta-row"><span>Latest Humidity</span><span>--</span></div>
+      <div class="meta-row"><span>Latest Wind</span><span>--</span></div>
+      <div class="meta-row"><span>Latest Result</span><span>--</span></div>
+    `;
+    return;
+  }
+
+  const last = history[history.length - 1];
+
+  summaryBlocks.innerHTML = `
+    <div class="meta-row"><span>Total Readings</span><span>${history.length}</span></div>
+    <div class="meta-row"><span>Latest Temperature</span><span>${last.temp.toFixed(1)} °C</span></div>
+    <div class="meta-row"><span>Latest Humidity</span><span>${last.humidity.toFixed(0)}%</span></div>
+    <div class="meta-row"><span>Latest Wind</span><span>${last.wind.toFixed(1)} km/h</span></div>
+    <div class="meta-row"><span>Latest Result</span><span>${last.advisory.title}</span></div>
+  `;
+}
+
+function renderChart(history){
+  lastHistory = history;
+  if(history.length === 0){
+    analysisChart.innerHTML = "";
+    chartHint.textContent = "Submit readings to display the temperature, humidity, and wind value bars.";
+    return;
+  }
+
+  const latest = history[history.length - 1];
+  const width = 700;
+  const height = 460;
+  const paddingX = 44;
+  const headerSpace = 88;
+  const footerSpace = 70;
+  const chartTop = headerSpace;
+  const baseY = height - footerSpace;
+  const chartHeight = baseY - chartTop;
+  const title = latest.advisory.title.toLowerCase();
+  const themeMap = [
+    {key: "thunderstorm", base: "#e0e7ff", panel: "#e0f2fe", pattern: "storm"},
+    {key: "storm", base: "#e0f2fe", panel: "#dbeafe", pattern: "storm"},
+    {key: "cyclone", base: "#e0f2fe", panel: "#dbeafe", pattern: "storm"},
+    {key: "gale", base: "#e0f2fe", panel: "#dbeafe", pattern: "storm"},
+    {key: "wind", base: "#e0f2fe", panel: "#dbeafe", pattern: "storm"},
+    {key: "breeze", base: "#e0f2fe", panel: "#dbeafe", pattern: "storm"},
+    {key: "rain", base: "#e0f2fe", panel: "#dbeafe", pattern: "rain"},
+    {key: "fog", base: "#f1f5f9", panel: "#e2e8f0", pattern: "fog"},
+    {key: "heatwave", base: "#fff1f2", panel: "#ffe4e6", pattern: "sun"},
+    {key: "heat", base: "#fff7ed", panel: "#ffedd5", pattern: "sun"},
+    {key: "hot", base: "#fff7ed", panel: "#ffedd5", pattern: "sun"},
+    {key: "pleasant", base: "#ecfdf3", panel: "#f2fdf7", pattern: "sun"},
+    {key: "cold", base: "#e0f2fe", panel: "#dbeafe", pattern: "cold"},
+    {key: "freezing", base: "#e6f4ff", panel: "#d9ecff", pattern: "freezing"}
+  ];
+  const matched = themeMap.find(t => title.includes(t.key));
+  const activeTheme = matched || {base: "#f8fafc", panel: "#f1f5f9", pattern: "neutral"};
+
+  const metrics = [
+    {label: "Temp (°C)", value: latest.temp, max: 100, color: "#10b981"},
+    {label: "Humidity (%)", value: latest.humidity, max: 100, color: "#f97316"},
+    {label: "Wind (km/h)", value: latest.wind, max: 150, color: "#22d3ee"}
+  ];
+
+  const xPositions = [
+    width * 0.25,
+    width * 0.5,
+    width * 0.75
+  ];
+
+  analysisChart.innerHTML = `
+    <defs>
+      <filter id="labelShadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.18"/>
+      </filter>
+    </defs>
+    <rect x="0" y="0" width="${width}" height="${height}" fill="${activeTheme.base}" />
+    ${activeTheme.pattern === "rain" ? `
+      <g opacity="0.4">
+        ${Array.from({length: 60}).map((_, i) => {
+          const x = 30 + (i * 14) % 640;
+          const y = 18 + Math.floor(i / 12) * 60;
+          return `<line x1="${x}" y1="${y}" x2="${x - 8}" y2="${y + 22}" stroke="#60a5fa" stroke-width="2" />`;
+        }).join("")}
+      </g>
+    ` : ""}
+    ${activeTheme.pattern === "storm" ? `
+      <g opacity="0.35">
+        <path d="M520 40 L480 120 L520 120 L470 210" stroke="#1f2937" stroke-width="6" fill="none"/>
+        <path d="M140 60 L110 130 L150 130 L100 210" stroke="#1f2937" stroke-width="5" fill="none"/>
+      </g>
+    ` : ""}
+    ${activeTheme.pattern === "sun" ? `
+      <g opacity="0.25">
+        <circle cx="560" cy="70" r="36" fill="#f59e0b"/>
+        ${Array.from({length: 10}).map((_, i) => {
+          const angle = (i * 36) * Math.PI / 180;
+          const x1 = 560 + Math.cos(angle) * 52;
+          const y1 = 70 + Math.sin(angle) * 52;
+          const x2 = 560 + Math.cos(angle) * 66;
+          const y2 = 70 + Math.sin(angle) * 66;
+          return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#f59e0b" stroke-width="3"/>`;
+        }).join("")}
+      </g>
+    ` : ""}
+    ${activeTheme.pattern === "cold" ? `
+      <g opacity="0.45">
+        <circle cx="600" cy="90" r="22" fill="#cbd5f5"/>
+        <circle cx="592" cy="86" r="6" fill="#e2e8f0"/>
+        <circle cx="612" cy="100" r="4" fill="#e2e8f0"/>
+      </g>
+    ` : ""}
+    ${activeTheme.pattern === "fog" ? `
+      <g opacity="0.4">
+        ${[70,110,150].map((y) => `<rect x="40" y="${y}" width="620" height="12" fill="#cbd5f5"/>`).join("")}
+      </g>
+    ` : ""}
+    ${(activeTheme.pattern === "cold" || activeTheme.pattern === "freezing") ? `
+      <g opacity="0.45" stroke="#60a5fa" stroke-width="2">
+        ${Array.from({length: 8}).map((_, i) => {
+          const x = 90 + i * 70;
+          const y = 80 + (i % 2) * 50;
+          return `
+            <line x1="${x - 8}" y1="${y}" x2="${x + 8}" y2="${y}"/>
+            <line x1="${x}" y1="${y - 8}" x2="${x}" y2="${y + 8}"/>
+            <line x1="${x - 6}" y1="${y - 6}" x2="${x + 6}" y2="${y + 6}"/>
+            <line x1="${x - 6}" y1="${y + 6}" x2="${x + 6}" y2="${y - 6}"/>
+          `;
+        }).join("")}
+      </g>
+    ` : ""}
+    ${activeTheme.pattern === "freezing" ? `
+      <g opacity="0.7">
+        ${Array.from({length: 4}).map((_, i) => {
+          const x = 130 + i * 120;
+          const y = 210 + (i % 2) * 24;
+          return `<rect x="${x}" y="${y}" width="36" height="26" rx="6" fill="#bfdbfe" stroke="#93c5fd" stroke-width="2"/>`;
+        }).join("")}
+      </g>
+    ` : ""}
+    <g opacity="0.6">
+      ${Array.from({length: 4}).map((_, i) => {
+        const y = chartTop + i * (chartHeight / 4);
+        return `<line x1="${paddingX - 2}" y1="${y}" x2="${width - paddingX + 6}" y2="${y}" stroke="#e2e8f0" stroke-dasharray="4 6"/>`;
+      }).join("")}
+    </g>
+    <line x1="${paddingX - 6}" y1="${baseY}" x2="${width - paddingX + 8}" y2="${baseY}" stroke="#475569" stroke-width="3"/>
+    <line x1="${paddingX - 6}" y1="${baseY}" x2="${paddingX - 6}" y2="${chartTop - 10}" stroke="#475569" stroke-width="3"/>
+    <text x="${paddingX}" y="30" text-anchor="start" fill="#0f172a" font-weight="700">Weather Advisory Snapshot</text>
+    <text x="${paddingX}" y="56" text-anchor="start" fill="#475569" font-weight="600">Result: ${latest.advisory.title}</text>
+    <text x="${paddingX}" y="${height - 12}" text-anchor="start" fill="#64748b" font-weight="600">
+      Temp: ${latest.temp.toFixed(1)}°C   Humidity: ${latest.humidity.toFixed(0)}%   Wind: ${latest.wind.toFixed(1)} km/h
+    </text>
+    <text x="${paddingX}" y="${chartTop - 16}" text-anchor="start" fill="#64748b">Latest Reading</text>
+    ${metrics.map((metric, idx) => {
+      const x = xPositions[idx];
+      const value = Math.max(0, Math.min(metric.value, metric.max));
+      const barHeight = chartHeight * (value / metric.max);
+      const y = baseY - barHeight;
+      const barWidth = 72;
+      return `
+        <rect x="${x - barWidth / 2}" y="${y}" width="${barWidth}" height="${barHeight}" rx="10" fill="${metric.color}">
+          <animate attributeName="y" from="${baseY}" to="${y}" dur="700ms" begin="0ms" fill="freeze" />
+          <animate attributeName="height" from="0" to="${barHeight}" dur="700ms" begin="0ms" fill="freeze" />
+        </rect>
+        <text x="${x}" y="${Math.max(20, y - 8)}" text-anchor="middle" fill="#0f172a">${metric.value.toFixed(1)}</text>
+        <text x="${x}" y="${height - 36}" text-anchor="middle" fill="#64748b">${metric.label}</text>
+      `;
+    }).join("")}
+  `;
+
+  chartHint.textContent = "Note: Bar heights are scaled proportionally to each metric's value.";
+}
+
+function loadExports(){
+  try {
+    return JSON.parse(localStorage.getItem(EXPORT_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveExports(list){
+  localStorage.setItem(EXPORT_KEY, JSON.stringify(list));
+}
+
+function addExport(entry){
+  const list = loadExports();
+  list.unshift(entry);
+  const trimmed = list.slice(0, 6);
+  saveExports(trimmed);
+  renderExports(trimmed);
+}
+
+function renderExports(list){
+  if(list.length === 0){
+    recentExports.innerHTML = `<div class="muted">No saved graph snapshots yet.</div>`;
+    return;
+  }
+  recentExports.innerHTML = list.map(item => `
+    <div class="export-item">
+      <span>${item.label}</span>
+      <a href="${item.dataUrl}" download="${item.filename}">Download PNG</a>
+    </div>
+  `).join("");
+}
+
+function svgToPngDataUrl(svgEl){
+  const clone = svgEl.cloneNode(true);
+  clone.querySelectorAll("animate").forEach(el => el.remove());
+  if(!clone.getAttribute("xmlns")){
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  }
+  if(!clone.getAttribute("xmlns:xlink")){
+    clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+  }
+  const bounds = svgEl.getBoundingClientRect();
+  const width = Math.max(1, Math.round(bounds.width));
+  const height = Math.max(1, Math.round(bounds.height));
+  clone.setAttribute("width", String(width));
+  clone.setAttribute("height", String(height));
+  const existingDefs = clone.querySelector("defs");
+  const styleEl = document.createElementNS("http://www.w3.org/2000/svg", "style");
+  styleEl.textContent = `
+    text {
+      font-family: "Space Grotesk", "DM Sans", "Segoe UI", sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.2px;
+    }
+  `;
+  if(existingDefs){
+    existingDefs.appendChild(styleEl);
+  } else {
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defs.appendChild(styleEl);
+    clone.insertBefore(defs, clone.firstChild);
+  }
+  const svgData = new XMLSerializer().serializeToString(clone);
+  const svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
+  const url = URL.createObjectURL(svgBlob);
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    img.src = url;
+  });
+}
+
+/* -------- EVENTS -------- */
+form.addEventListener("submit",(e)=>{
+  e.preventDefault();
+
+  const tempRaw = form.temp.value.trim();
+  const humidityRaw = form.humidity.value.trim();
+  const windRaw = form.wind.value.trim();
+
+  if(!tempRaw && !humidityRaw && !windRaw){
+    formError.textContent = "Please enter at least one value.";
+    return;
+  }
+
+  const temp = tempRaw === "" ? 0 : Number(tempRaw);
+  const humidity = humidityRaw === "" ? 0 : Number(humidityRaw);
+  const wind = windRaw === "" ? 0 : Number(windRaw);
+
+  const error = validateInputs(temp, humidity, wind);
+  if(error){
+    formError.textContent = "Invalid input, please check the values.";
+    return;
+  }
+  formError.textContent = "";
+
+  const result = advisoryModel({temp, humidity, wind});
+
+  statusBadge.className = `badge ${result.advisory.level}`;
+  statusBadge.textContent = result.advisory.title;
+  probability.textContent = `Advisory status: ${result.advisory.title}`;
+  message.textContent = result.advisory.message;
+  renderReadings(temp,humidity,wind);
+  renderTrace(temp, humidity, wind, result);
+
+  actions.innerHTML = result.advisory.actions
+    .map(a => `<span class="chip">${a}</span>`).join(" ");
+
+  const suggestionList = [];
+  if(result.humidityInfo) suggestionList.push(`Humidity: ${result.humidityInfo.title}.`);
+  if(result.windInfo) suggestionList.push(`Wind: ${result.windInfo.title}.`);
+  if(result.storm > 0.6) suggestionList.push("High storm risk. Avoid travel.");
+  if(result.rain > 0.5) suggestionList.push("Rain likely. Carry protection.");
+  if(temp > 35) suggestionList.push("Hot conditions. Prefer shade and hydration.");
+  if(temp < 5) suggestionList.push("Cold conditions. Wear warm layers.");
+  if(wind > 50) suggestionList.push("Strong winds. Secure loose items.");
+
+  suggestions.textContent = suggestionList.length
+    ? `Suggestions: ${suggestionList.join(" ")}`
+    : "Suggestions: Conditions appear normal for routine activity.";
+
+  const history = appendHistory({
+    temp,
+    humidity,
+    wind,
+    confidence: result.confidence,
+    advisory: result.advisory,
+    timestamp: new Date().toISOString()
+  });
+
+  renderChart(history);
+  renderSummary(history);
+
+  statusBadge.classList.add("pulse");
+  setTimeout(() => statusBadge.classList.remove("pulse"), 1500);
+
+  form.reset();
+  form.temp.focus();
+});
+
+["temp", "humidity", "wind"].forEach((field) => {
+  form[field].addEventListener("input", () => {
+    statusBadge.className = "badge good";
+    statusBadge.textContent = "Awaiting inputs";
+    probability.textContent = "Advisory details will appear after submission.";
+    message.textContent = "Submit inputs to generate the advisory result.";
+    readings.innerHTML = "";
+    actions.innerHTML = "";
+    suggestions.textContent = "";
+    calcTrace.textContent = "Enter values to see step-by-step computation.";
+    renderChart([]);
+  });
+});
+
+saveGraphBtn.addEventListener("click", async () => {
+  const history = loadHistory();
+  if(history.length < 1){
+    chartHint.textContent = "Add at least one reading before saving a graph snapshot.";
+    return;
+  }
+  const dataUrl = await svgToPngDataUrl(analysisChart);
+  if(!dataUrl){
+    chartHint.textContent = "Snapshot failed. Try again after submitting a reading.";
+    return;
+  }
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const filename = `advisory-graph-${stamp}.png`;
+  addExport({
+    label: `Snapshot ${history.length} pts`,
+    filename,
+    dataUrl
+  });
+});
+
+clearBtn.addEventListener("click", () => {
+  localStorage.removeItem(STORAGE_KEY);
+  renderChart([]);
+  renderSummary([]);
+  statusBadge.className = "badge good";
+  statusBadge.textContent = "Awaiting inputs";
+  probability.textContent = "Advisory details will appear after submission.";
+  message.textContent = "Submit inputs to generate the advisory result.";
+  readings.innerHTML = "";
+  actions.innerHTML = "";
+  suggestions.textContent = "";
+  calcTrace.textContent = "Enter values to see step-by-step computation.";
+  form.reset();
+  form.temp.focus();
+});
+
+clearSnapshotsBtn.addEventListener("click", () => {
+  localStorage.removeItem(EXPORT_KEY);
+  renderExports([]);
+});
+
+renderChart([]);
+renderSummary([]);
+renderExports(loadExports());
+  </script>
+</body>
+</html>
+    @keyframes softReveal {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
